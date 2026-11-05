@@ -24,6 +24,13 @@ The first source build needs Rust and can be slow. Python build backends and
 Rust crate builds may access the network; versioned Python source resources
 are SHA-256 checked but this is not a fully offline or hermetic build.
 
+On hosted Intel runners, an existing `idle3.13` link can conflict with
+Homebrew's Python. CI installs `python@3.13` with `--skip-link`, without
+overwriting that runner file. An unlinked Homebrew Python does not find its
+complete `pip` in the global site-packages; the formula selects the declared
+interpreter and its keg-local `pip` only while building its isolated virtual
+environment. Do not replace unrelated Python files to work around this.
+
 ## Maintainer update procedure
 
 1. Publish and verify the intended RefHound version separately, with explicit

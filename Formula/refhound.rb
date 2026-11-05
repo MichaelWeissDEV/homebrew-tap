@@ -103,10 +103,12 @@ class Refhound < Formula
   allow_network_access! :build
 
   def install
-    # The hosted Intel runner also has a framework Python 3.13 on PATH. The
-    # virtualenv helper invokes the base interpreter for every pip operation:
-    # always resolve that interpreter from our declared Homebrew dependency.
+    # The Intel runner has conflicting global Python 3.13 links. With the
+    # Homebrew Python keg unlinked, its pip lives inside the keg rather than
+    # the global site-packages. The virtualenv helper uses the base Python's
+    # pip to install resources into the otherwise isolated application venv.
     ENV.prepend_path "PATH", formula_opt_bin("python@3.13")
+    ENV["PYTHONPATH"] = (formula_opt_lib("python@3.13")/"python3.13/site-packages").to_s
     virtualenv_install_with_resources(system_site_packages: false)
   end
 

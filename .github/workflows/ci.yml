@@ -31,8 +31,10 @@ jobs:
         run: |
           set -euo pipefail
           printf 'Runner PATH: %s\n' "$PATH"
-          brew install python@3.13
+          # Do not replace the runner's existing idle3.13 or other Python links.
+          brew install --skip-link python@3.13
           prefix=$(brew --prefix python@3.13)
+          python_site="$prefix/lib/python3.13/site-packages"
           brew list --versions python@3.13
           if [ -e "$(brew --prefix)/bin/idle3.13" ]; then
             ls -ld "$(brew --prefix)/bin/idle3.13"
@@ -40,18 +42,21 @@ jobs:
             echo 'idle3.13 is not linked in the global Homebrew prefix'
           fi
           ls -ld "$prefix/bin/python3.13"
-          "$prefix/bin/python3.13" - <<'PY'
+          test -f "$python_site/pip/__main__.py"
+          PYTHONPATH="$python_site" BREW_PYTHON_PREFIX="$prefix" "$prefix/bin/python3.13" - <<'PY'
           import importlib.util
+          import os
           import pip
           import sys
           print('executable:', sys.executable)
           print('sys.path:', sys.path)
           print('pip.__file__:', pip.__file__)
           print('pip spec:', importlib.util.find_spec('pip'))
+          assert sys.executable.startswith(os.environ['BREW_PYTHON_PREFIX']), sys.executable
+          assert pip.__file__.startswith(os.environ['BREW_PYTHON_PREFIX']), pip.__file__
           assert importlib.util.find_spec('pip.__main__'), 'Homebrew Python pip is incomplete'
-          assert sys.executable.startswith('/opt/homebrew/') or sys.executable.startswith('/usr/local/'), sys.executable
           PY
-          "$prefix/bin/python3.13" -m pip --version
+          PYTHONPATH="$python_site" "$prefix/bin/python3.13" -m pip --version
       - name: Install and test
         env:
           HOMEBREW_NO_AUTO_UPDATE: '1'
