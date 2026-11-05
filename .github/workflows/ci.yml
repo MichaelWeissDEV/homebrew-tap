@@ -1,0 +1,32 @@
+name: Homebrew formula
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  formula:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Link local tap and audit formula
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+        run: |
+          brew tap MichaelWeissDEV/tap "$GITHUB_WORKSPACE"
+          brew style MichaelWeissDEV/tap/refhound
+          brew audit --formula MichaelWeissDEV/tap/refhound
+      - name: Install and test
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+        run: |
+          brew install --build-from-source MichaelWeissDEV/tap/refhound
+          brew test MichaelWeissDEV/tap/refhound
