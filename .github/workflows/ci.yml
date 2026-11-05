@@ -22,11 +22,49 @@ jobs:
           HOMEBREW_NO_AUTO_UPDATE: '1'
         run: |
           brew tap MichaelWeissDEV/tap "$GITHUB_WORKSPACE"
+          brew trust --formula MichaelWeissDEV/tap/refhound
           brew style MichaelWeissDEV/tap/refhound
           brew audit --formula MichaelWeissDEV/tap/refhound
+      - name: Verify Homebrew Python (including pre-existing runner links)
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+        run: |
+          set -euo pipefail
+          printf 'Runner PATH: %s\n' "$PATH"
+          brew install python@3.13
+          prefix=$(brew --prefix python@3.13)
+          brew list --versions python@3.13
+          if [ -e "$(brew --prefix)/bin/idle3.13" ]; then
+            ls -ld "$(brew --prefix)/bin/idle3.13"
+          else
+            echo 'idle3.13 is not linked in the global Homebrew prefix'
+          fi
+          ls -ld "$prefix/bin/python3.13"
+          "$prefix/bin/python3.13" - <<'PY'
+          import importlib.util
+          import pip
+          import sys
+          print('executable:', sys.executable)
+          print('sys.path:', sys.path)
+          print('pip.__file__:', pip.__file__)
+          print('pip spec:', importlib.util.find_spec('pip'))
+          assert importlib.util.find_spec('pip.__main__'), 'Homebrew Python pip is incomplete'
+          assert sys.executable.startswith('/opt/homebrew/') or sys.executable.startswith('/usr/local/'), sys.executable
+          PY
+          "$prefix/bin/python3.13" -m pip --version
       - name: Install and test
         env:
           HOMEBREW_NO_AUTO_UPDATE: '1'
         run: |
+          set -euo pipefail
           brew install --build-from-source MichaelWeissDEV/tap/refhound
           brew test MichaelWeissDEV/tap/refhound
+          refhound --version
+          refhound --help
+          brew reinstall --build-from-source MichaelWeissDEV/tap/refhound
+          brew test MichaelWeissDEV/tap/refhound
+          brew uninstall MichaelWeissDEV/tap/refhound
+          if command -v refhound; then
+            echo 'refhound remains on PATH after uninstall' >&2
+            exit 1
+          fi

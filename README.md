@@ -2,11 +2,12 @@
 
 This repository contains `Formula/refhound.rb`, currently pointing to the
 **0.1.0b1 beta** published on PyPI. The formula and its installation matrix
-have not yet been validated; do not treat this beta as a stable release. The
-formula will only be available to other users after the reviewed tap commit is
-pushed to GitHub. No push or publication is performed by this repository.
+failed on both macOS runner architectures. The tap is published, but do not
+treat the beta formula as a validated installation route until both jobs pass.
+The formula still targets the immutable beta; stable source URL and checksum
+cannot be filled in before the stable PyPI artifact is published.
 
-Once the formula has passed CI and is published in this tap:
+Once the formula has passed CI:
 
 ```sh
 brew tap MichaelWeissDEV/tap

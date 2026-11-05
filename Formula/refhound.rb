@@ -9,7 +9,6 @@ class Refhound < Formula
   sha256 "90241259138a9f40789911f05b758fa85cbed847446bf767efbe9e56de792b7a"
   license "MIT"
 
-  depends_on "maturin" => :build
   depends_on "rust" => :build
   depends_on "git"
   depends_on "libyaml"
@@ -104,17 +103,28 @@ class Refhound < Formula
   allow_network_access! :build
 
   def install
-    virtualenv_install_with_resources
+    # The hosted Intel runner also has a framework Python 3.13 on PATH. The
+    # virtualenv helper invokes the base interpreter for every pip operation:
+    # always resolve that interpreter from our declared Homebrew dependency.
+    ENV.prepend_path "PATH", formula_opt_bin("python@3.13")
+    virtualenv_install_with_resources(system_site_packages: false)
   end
 
   test do
+    system bin/"refhound", "--version"
+    system bin/"refhound", "--help"
     system "git", "init", "-q"
     (testpath/"sample.txt").write("synthetic repository\n")
     system "git", "add", "sample.txt"
     system "git", "-c", "user.name=Test", "-c", "user.email=test@example.invalid", "commit", "-qm", "test"
+    doctor_output = shell_output("#{bin}/refhound doctor '#{testpath}' --json")
+    doctor = JSON.parse(doctor_output[doctor_output.index("{")..])
+    assert_equal testpath.realpath.to_s, doctor.fetch("repository")
     system bin/"refhound", "scan", testpath, "--offline", "--quick", "--no-store",
            "--format", "json", "-o", testpath/"scan.json"
     report = JSON.parse((testpath/"scan.json").read)
     assert_equal "quick", report.fetch("scan_profile")
+    assert_kind_of Hash, report.fetch("repository")
+    system libexec/"bin/python", "-I", "-c", "import refhound, pydantic_core, yaml, sqlalchemy"
   end
 end
